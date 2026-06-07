@@ -1,0 +1,11 @@
+{
+  "name": "raiderjaaa-rider-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal Tailwind CSS web app for Grab riders to track trip fees, fuel cost, profit, and summaries.",
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "dev": "python3 -m http.server 5173",
+    "build": "node -e \"console.log('Static Tailwind app: no build step required')\""
+  }
+}
