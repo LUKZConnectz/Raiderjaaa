@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800;900&display=swap');
+
+* {
+  font-family: 'Noto Sans Thai', system-ui, sans-serif;
+}
+
+.stat-card {
+  align-items: center;
+  background: rgb(255 255 255 / 0.9);
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 35px rgb(148 163 184 / 0.18);
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.dark .stat-card {
+  background: rgb(15 23 42 / 0.9);
+  border-color: rgb(30 41 59);
+  box-shadow: 0 18px 35px rgb(0 0 0 / 0.2);
+}
+
+.stat-card span {
+  display: grid;
+  height: 3rem;
+  place-items: center;
+  width: 3rem;
+  border-radius: 1rem;
+  background: rgb(16 185 129 / 0.12);
+  font-size: 1.5rem;
+}
+
+.stat-card p,
+.summary-card p,
+.summary-card span {
+  color: rgb(100 116 139);
+  font-size: 0.875rem;
+}
+
+.dark .stat-card p,
+.dark .summary-card p,
+.dark .summary-card span {
+  color: rgb(148 163 184);
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.field {
+  color: rgb(51 65 85);
+  display: grid;
+  font-size: 0.875rem;
+  font-weight: 800;
+  gap: 0.5rem;
+}
+
+.dark .field {
+  color: rgb(203 213 225);
+}
+
+.field input,
+.field select {
+  background: white;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  color: rgb(15 23 42);
+  font-weight: 700;
+  outline: none;
+  padding: 0.85rem 1rem;
+}
+
+.dark .field input,
+.dark .field select {
+  background: rgb(2 6 23);
+  border-color: rgb(51 65 85);
+  color: rgb(241 245 249);
+}
+
+.field input:focus,
+.field select:focus {
+  box-shadow: 0 0 0 4px rgb(167 243 208 / 0.7);
+}
+
+.action-btn {
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 900;
+  padding: 0.7rem 1rem;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.action-btn:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.summary-card {
+  background: linear-gradient(135deg, rgb(248 250 252), rgb(240 253 244));
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.5rem;
+  padding: 1rem;
+}
+
+.dark .summary-card {
+  background: linear-gradient(135deg, rgb(2 6 23), rgb(6 78 59 / 0.35));
+  border-color: rgb(30 41 59);
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 900;
+  margin: 0.25rem 0;
+}
+
+.fuel-card {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.25rem;
+  padding: 0.85rem;
+}
+
+.dark .fuel-card {
+  border-color: rgb(51 65 85);
+}
+
+.bar {
+  background: linear-gradient(180deg, rgb(16 185 129), rgb(132 204 22));
+  border-radius: 999px 999px 0.5rem 0.5rem;
+  min-height: 0.75rem;
+  transition: height 220ms ease;
+}
