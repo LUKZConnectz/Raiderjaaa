@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'raiderjaaa.jobs.v1';
 const SETTINGS_KEY = 'raiderjaaa.settings.v1';
+const PRESENCE_KEY = 'raiderjaaa.presence.v1';
+const PRESENCE_TTL = 15000;
+const PRESENCE_INTERVAL = 5000;
 const FUEL_API = 'https://api.chnwt.dev/thai-oil-api/latest';
 const DEFAULT_FUELS = [
   { type: 'Gasohol 91', price: 37.98 },
@@ -17,6 +20,8 @@ let settings = loadJson(SETTINGS_KEY, {
   fuels: DEFAULT_FUELS,
   lastFuelUpdate: null
 });
+let riderSessionId = crypto.randomUUID();
+let presenceTimer = null;
 
 const $ = (id) => document.getElementById(id);
 const money = (value) => `฿${Number(value || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
@@ -36,6 +41,40 @@ function saveState() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+function cleanupPresence() {
+  const now = Date.now();
+  return loadJson(PRESENCE_KEY, []).filter((session) => session?.id && now - session.lastSeen < PRESENCE_TTL);
+}
+
+function heartbeatPresence() {
+  const others = cleanupPresence().filter((session) => session.id !== riderSessionId);
+  localStorage.setItem(PRESENCE_KEY, JSON.stringify([...others, { id: riderSessionId, lastSeen: Date.now() }]));
+  renderRealtimePresence();
+}
+
+function removePresence() {
+  const activeSessions = cleanupPresence().filter((session) => session.id !== riderSessionId);
+  localStorage.setItem(PRESENCE_KEY, JSON.stringify(activeSessions));
+}
+
+function renderRealtimePresence() {
+  const activeCount = cleanupPresence().length;
+  $('liveRiders').textContent = activeCount;
+  $('liveRidersSub').textContent = `ออนไลน์ตอนนี้ • อัปเดต ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+}
+
+function startRealtimePresence() {
+  heartbeatPresence();
+  presenceTimer = setInterval(heartbeatPresence, PRESENCE_INTERVAL);
+  window.addEventListener('storage', (event) => {
+    if (event.key === PRESENCE_KEY) renderRealtimePresence();
+  });
+  window.addEventListener('pagehide', () => {
+    clearInterval(presenceTimer);
+    removePresence();
+  });
+}
+
 function init() {
   applyTheme();
   $('jobDate').value = today();
@@ -45,6 +84,7 @@ function init() {
   bindEvents();
   updatePreview();
   render();
+  startRealtimePresence();
   fetchFuelPrice();
 }
 

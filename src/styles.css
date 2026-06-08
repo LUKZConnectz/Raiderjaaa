@@ -134,3 +134,44 @@
   min-height: 0.75rem;
   transition: height 220ms ease;
 }
+
+.live-rider-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.live-rider-card::after {
+  animation: livePulse 1.8s ease-in-out infinite;
+  background: rgb(16 185 129 / 0.18);
+  border-radius: 999px;
+  content: '';
+  height: 0.75rem;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  width: 0.75rem;
+}
+
+.live-rider-card small {
+  color: rgb(16 185 129);
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-top: 0.15rem;
+}
+
+.dark .live-rider-card small {
+  color: rgb(110 231 183);
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.35);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 0 0.6rem rgb(16 185 129 / 0);
+    transform: scale(1.08);
+  }
+}
