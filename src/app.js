@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'raiderjaaa.jobs.v1';
 const SETTINGS_KEY = 'raiderjaaa.settings.v1';
+const PROFILE_KEY = 'raiderjaaa.profile.v1';
 const PRESENCE_KEY = 'raiderjaaa.presence.v1';
 const PRESENCE_TTL = 15000;
 const PRESENCE_INTERVAL = 5000;
@@ -10,6 +11,17 @@ const DEFAULT_FUELS = [
   { type: 'E20', price: 36.14 },
   { type: 'Diesel', price: 31.94 }
 ];
+const DEFAULT_PROFILE = {
+  name: 'ไรเดอร์ Raiderjaaa',
+  phone: '',
+  vehicle: '',
+  plate: '',
+  city: '',
+  avatar: '🛵',
+  fuelType: 'Gasohol 95',
+  efficiency: 40,
+  bio: ''
+};
 
 let jobs = loadJson(STORAGE_KEY, []);
 let settings = loadJson(SETTINGS_KEY, {
@@ -20,6 +32,7 @@ let settings = loadJson(SETTINGS_KEY, {
   fuels: DEFAULT_FUELS,
   lastFuelUpdate: null
 });
+let profile = { ...DEFAULT_PROFILE, ...loadJson(PROFILE_KEY, {}) };
 let riderSessionId = crypto.randomUUID();
 let presenceTimer = null;
 
@@ -27,6 +40,13 @@ const $ = (id) => document.getElementById(id);
 const money = (value) => `฿${Number(value || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
 const number = (value, digits = 2) => Number(value || 0).toLocaleString('th-TH', { maximumFractionDigits: digits });
 const today = () => new Date().toISOString().slice(0, 10);
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+})[char]);
 
 function loadJson(key, fallback) {
   try {
@@ -39,6 +59,7 @@ function loadJson(key, fallback) {
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
 function cleanupPresence() {
@@ -80,6 +101,7 @@ function init() {
   $('jobDate').value = today();
   $('efficiency').value = settings.efficiency;
   $('jobFuelPrice').value = settings.fuelPrice;
+  syncProfileWithSettings();
   renderFuelOptions();
   bindEvents();
   updatePreview();
@@ -99,7 +121,12 @@ function bindEvents() {
   $('exportExcelBtn').addEventListener('click', exportExcel);
   $('exportPdfBtn').addEventListener('click', exportPdf);
   $('searchInput').addEventListener('input', renderJobsTable);
+  $('profileForm').addEventListener('submit', saveProfile);
+  $('resetProfileBtn').addEventListener('click', resetProfile);
+  $('profileRefreshFuelBtn').addEventListener('click', fetchFuelPrice);
+  window.addEventListener('hashchange', renderRoute);
   ['jobFee', 'jobKm', 'efficiency', 'jobFuelPrice'].forEach((id) => $(id).addEventListener('input', updatePreview));
+  ['profileFuelType', 'profileEfficiency'].forEach((id) => $(id).addEventListener('change', previewProfileDefaults));
 }
 
 function applyTheme() {
@@ -116,6 +143,8 @@ function toggleTheme() {
 async function fetchFuelPrice() {
   $('fuelStatus').textContent = 'กำลังโหลด';
   $('fuelStatus').className = 'rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-200';
+  $('profileApiStatus').textContent = 'กำลังโหลด';
+  $('profileApiStatus').className = 'rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-200';
   try {
     const response = await fetch(FUEL_API, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Fuel API ${response.status}`);
@@ -129,6 +158,7 @@ async function fetchFuelPrice() {
     settings.fuelPrice = selected.price;
     $('jobFuelPrice').value = selected.price;
     saveState();
+    syncProfileFuelPrice();
     renderFuelOptions();
     setFuelStatus('Live', true);
   } catch (error) {
@@ -137,6 +167,7 @@ async function fetchFuelPrice() {
   }
   renderFuelCards();
   updatePreview();
+  renderProfile();
 }
 
 function normalizeFuelData(payload) {
@@ -167,23 +198,29 @@ function setFuelStatus(text, live) {
 
 function renderFuelOptions() {
   const fuels = settings.fuels.length ? settings.fuels : DEFAULT_FUELS;
-  $('fuelType').innerHTML = fuels.map((fuel) => `<option value="${fuel.type}">${fuel.type} • ${money(fuel.price)}/ลิตร</option>`).join('');
+  const options = fuels.map((fuel) => `<option value="${escapeHtml(fuel.type)}">${escapeHtml(fuel.type)} • ${money(fuel.price)}/ลิตร</option>`).join('');
+  $('fuelType').innerHTML = options;
+  $('profileFuelType').innerHTML = options;
   $('fuelType').value = settings.fuelType;
+  $('profileFuelType').value = profile.fuelType;
   $('manualFuelPrice').value = settings.fuelPrice;
   renderFuelCards();
+  renderProfile();
 }
 
 function renderFuelCards() {
   const fuels = settings.fuels.length ? settings.fuels : DEFAULT_FUELS;
-  $('fuelCards').innerHTML = fuels.slice(0, 4).map((fuel) => `
-    <button class="fuel-card text-left transition hover:border-emerald-400 ${fuel.type === settings.fuelType ? 'ring-2 ring-emerald-400' : ''}" data-fuel="${fuel.type}">
-      <p class="text-xs font-bold text-slate-500 dark:text-slate-400">${fuel.type}</p>
+  $('fuelCards').innerHTML = fuels.slice(0, 4).map((fuel, index) => `
+    <button class="fuel-card text-left transition hover:border-emerald-400 ${fuel.type === settings.fuelType ? 'ring-2 ring-emerald-400' : ''}" data-fuel-index="${index}">
+      <p class="text-xs font-bold text-slate-500 dark:text-slate-400">${escapeHtml(fuel.type)}</p>
       <strong class="text-lg font-black">${money(fuel.price)}</strong>
       <p class="text-xs text-slate-400">/ ลิตร</p>
     </button>`).join('');
-  document.querySelectorAll('[data-fuel]').forEach((button) => {
+  document.querySelectorAll('[data-fuel-index]').forEach((button) => {
     button.addEventListener('click', () => {
-      $('fuelType').value = button.dataset.fuel;
+      const fuel = fuels[Number(button.dataset.fuelIndex)];
+      if (!fuel) return;
+      $('fuelType').value = fuel.type;
       handleFuelTypeChange();
     });
   });
@@ -194,11 +231,13 @@ function handleFuelTypeChange() {
   if (!fuel) return;
   settings.fuelType = fuel.type;
   settings.fuelPrice = fuel.price;
+  profile.fuelType = fuel.type;
   $('manualFuelPrice').value = fuel.price;
   $('jobFuelPrice').value = fuel.price;
   saveState();
   renderFuelCards();
   updatePreview();
+  renderProfile();
 }
 
 function saveManualFuelPrice() {
@@ -304,6 +343,8 @@ function render() {
 
   renderProfitBars();
   renderJobsTable();
+  renderProfile();
+  renderRoute();
 }
 
 function summarize(items) {
@@ -350,8 +391,8 @@ function renderJobsTable() {
   $('emptyState').classList.toggle('hidden', filtered.length > 0);
   $('jobsTable').innerHTML = filtered.map((job) => `
     <tr class="border-b border-slate-100 dark:border-slate-800">
-      <td class="py-4 pr-4 font-bold">${job.date}</td>
-      <td class="py-4 pr-4">${job.note}<br><span class="text-xs text-slate-400">${job.fuelType} • ${money(job.fuelPrice)}/ลิตร</span></td>
+      <td class="py-4 pr-4 font-bold">${escapeHtml(job.date)}</td>
+      <td class="py-4 pr-4">${escapeHtml(job.note)}<br><span class="text-xs text-slate-400">${escapeHtml(job.fuelType)} • ${money(job.fuelPrice)}/ลิตร</span></td>
       <td class="py-4 pr-4 font-bold">${money(job.fee)}</td>
       <td class="py-4 pr-4">${number(job.km)} กม.</td>
       <td class="py-4 pr-4 text-rose-500">${money(job.fuelCost)}</td>
@@ -359,6 +400,109 @@ function renderJobsTable() {
       <td class="py-4 text-right"><button class="font-bold text-rose-500 hover:underline" data-delete="${job.id}">ลบ</button></td>
     </tr>`).join('');
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteJob(button.dataset.delete)));
+}
+
+
+function syncProfileWithSettings() {
+  profile.fuelType = profile.fuelType || settings.fuelType;
+  profile.efficiency = Number(profile.efficiency) || settings.efficiency;
+  syncProfileFuelPrice();
+}
+
+function syncProfileFuelPrice() {
+  const fuels = settings.fuels.length ? settings.fuels : DEFAULT_FUELS;
+  const fuel = fuels.find((item) => item.type === profile.fuelType) || fuels.find((item) => item.type === settings.fuelType) || fuels[0];
+  if (!fuel) return;
+  profile.fuelType = fuel.type;
+}
+
+function renderRoute() {
+  const isProfile = window.location.hash === '#profile';
+  $('dashboardPage').classList.toggle('hidden', isProfile);
+  $('profilePage').classList.toggle('hidden', !isProfile);
+  $('dashboardNav').classList.toggle('nav-pill-active', !isProfile);
+  $('profileNav').classList.toggle('nav-pill-active', isProfile);
+}
+
+function previewProfileDefaults() {
+  const efficiency = Number.parseFloat($('profileEfficiency').value) || profile.efficiency || settings.efficiency;
+  const fuelType = $('profileFuelType').value || profile.fuelType;
+  $('profileEfficiencyPreview').textContent = `${number(efficiency, 1)} กม./ลิตร`;
+  const fuels = settings.fuels.length ? settings.fuels : DEFAULT_FUELS;
+  const fuel = fuels.find((item) => item.type === fuelType) || fuels[0];
+  $('profileFuelName').textContent = fuel?.type || '-';
+  $('profileFuelPrice').textContent = `${money(fuel?.price || settings.fuelPrice)}/ลิตร`;
+}
+
+function renderProfile() {
+  const total = summarize(jobs);
+  const fuels = settings.fuels.length ? settings.fuels : DEFAULT_FUELS;
+  const fuel = fuels.find((item) => item.type === profile.fuelType) || fuels.find((item) => item.type === settings.fuelType) || fuels[0];
+  const updatedText = settings.lastFuelUpdate
+    ? new Date(settings.lastFuelUpdate).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'ยังไม่มีข้อมูลจาก API';
+
+  $('profileName').value = profile.name;
+  $('profilePhone').value = profile.phone;
+  $('profileVehicle').value = profile.vehicle;
+  $('profilePlate').value = profile.plate;
+  $('profileCity').value = profile.city;
+  $('profileAvatar').value = profile.avatar;
+  $('profileEfficiency').value = profile.efficiency;
+  $('profileBio').value = profile.bio;
+  if ([...$('profileFuelType').options].some((option) => option.value === profile.fuelType)) {
+    $('profileFuelType').value = profile.fuelType;
+  }
+
+  $('profileAvatarPreview').textContent = profile.avatar || DEFAULT_PROFILE.avatar;
+  $('profileNamePreview').textContent = profile.name || DEFAULT_PROFILE.name;
+  $('profileVehiclePreview').textContent = [profile.vehicle, profile.plate].filter(Boolean).join(' • ') || 'ยังไม่ได้ระบุรถ';
+  $('profileCityPreview').textContent = `พื้นที่วิ่งงาน: ${profile.city || '-'}`;
+  $('profileFuelName').textContent = fuel?.type || '-';
+  $('profileFuelPrice').textContent = `${money(fuel?.price || settings.fuelPrice)}/ลิตร`;
+  $('profileFuelUpdated').textContent = updatedText;
+  $('profileApiStatus').textContent = settings.lastFuelUpdate ? 'เชื่อมต่อแล้ว' : 'รอข้อมูล';
+  $('profileApiStatus').className = settings.lastFuelUpdate
+    ? 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+    : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+  $('profileJobs').textContent = total.count;
+  $('profileKm').textContent = `${number(total.km)} กม.`;
+  $('profileProfit').textContent = money(total.profit);
+  $('profileEfficiencyPreview').textContent = `${number(profile.efficiency, 1)} กม./ลิตร`;
+}
+
+function saveProfile(event) {
+  event.preventDefault();
+  const efficiency = Number.parseFloat($('profileEfficiency').value);
+  if (!Number.isFinite(efficiency) || efficiency <= 0) return alert('กรุณากรอกอัตราสิ้นเปลืองให้ถูกต้อง');
+  profile = {
+    name: $('profileName').value.trim() || DEFAULT_PROFILE.name,
+    phone: $('profilePhone').value.trim(),
+    vehicle: $('profileVehicle').value.trim(),
+    plate: $('profilePlate').value.trim(),
+    city: $('profileCity').value.trim(),
+    avatar: $('profileAvatar').value.trim() || DEFAULT_PROFILE.avatar,
+    fuelType: $('profileFuelType').value || settings.fuelType,
+    efficiency,
+    bio: $('profileBio').value.trim()
+  };
+  const fuel = (settings.fuels.length ? settings.fuels : DEFAULT_FUELS).find((item) => item.type === profile.fuelType);
+  settings.fuelType = profile.fuelType;
+  settings.efficiency = profile.efficiency;
+  if (fuel) settings.fuelPrice = fuel.price;
+  $('efficiency').value = settings.efficiency;
+  $('jobFuelPrice').value = settings.fuelPrice;
+  saveState();
+  renderFuelOptions();
+  updatePreview();
+  alert('บันทึก Profile เรียบร้อยแล้ว');
+}
+
+function resetProfile() {
+  if (!confirm('ต้องการคืนค่า Profile เป็นค่าเริ่มต้นใช่ไหม?')) return;
+  profile = { ...DEFAULT_PROFILE, fuelType: settings.fuelType, efficiency: settings.efficiency };
+  saveState();
+  renderProfile();
 }
 
 function exportRows() {

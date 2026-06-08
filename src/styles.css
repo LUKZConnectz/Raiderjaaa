@@ -175,3 +175,95 @@
     transform: scale(1.08);
   }
 }
+
+.nav-pill {
+  border-radius: 999px;
+  color: rgb(71 85 105);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 0.6rem 0.75rem;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav-pill:hover {
+  background: rgb(241 245 249);
+  transform: translateY(-1px);
+}
+
+.nav-pill-active {
+  background: rgb(16 185 129 / 0.14);
+  color: rgb(4 120 87);
+}
+
+.dark .nav-pill {
+  color: rgb(203 213 225);
+}
+
+.dark .nav-pill:hover {
+  background: rgb(30 41 59);
+}
+
+.dark .nav-pill-active {
+  background: rgb(16 185 129 / 0.18);
+  color: rgb(110 231 183);
+}
+
+.field textarea {
+  background: white;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  color: rgb(15 23 42);
+  font-weight: 700;
+  outline: none;
+  padding: 0.85rem 1rem;
+  resize: vertical;
+}
+
+.dark .field textarea {
+  background: rgb(2 6 23);
+  border-color: rgb(51 65 85);
+  color: rgb(241 245 249);
+}
+
+.field textarea:focus {
+  box-shadow: 0 0 0 4px rgb(167 243 208 / 0.7);
+}
+
+.profile-metric {
+  background: linear-gradient(135deg, rgb(248 250 252), rgb(240 253 244));
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.5rem;
+  padding: 1rem;
+}
+
+.dark .profile-metric {
+  background: linear-gradient(135deg, rgb(2 6 23), rgb(6 78 59 / 0.35));
+  border-color: rgb(30 41 59);
+}
+
+.profile-metric p,
+.profile-metric span {
+  color: rgb(100 116 139);
+  font-size: 0.875rem;
+}
+
+.dark .profile-metric p,
+.dark .profile-metric span {
+  color: rgb(148 163 184);
+}
+
+.profile-metric strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.2;
+  margin: 0.25rem 0;
+}
+
+@media (min-width: 640px) {
+  .nav-pill {
+    font-size: 0.875rem;
+    padding: 0.65rem 1rem;
+  }
+}

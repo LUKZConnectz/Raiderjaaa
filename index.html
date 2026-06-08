@@ -30,6 +30,8 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <a href="#dashboard" id="dashboardNav" class="nav-pill">Dashboard</a>
+          <a href="#profile" id="profileNav" class="nav-pill">Profile</a>
           <button id="refreshFuelBtn" class="hidden rounded-full border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950 sm:inline-flex">อัปเดตราคาน้ำมัน</button>
           <button id="themeToggle" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950">🌙 Dark</button>
         </div>
@@ -37,6 +39,7 @@
     </header>
 
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div id="dashboardPage">
       <section class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div class="rounded-[2rem] bg-gradient-to-br from-emerald-500 via-lime-500 to-green-600 p-6 text-white shadow-2xl shadow-emerald-500/25 sm:p-8">
           <div class="max-w-2xl">
@@ -144,6 +147,81 @@
           </table>
         </div>
         <div id="emptyState" class="hidden py-12 text-center text-slate-500">ยังไม่มีงาน ลองเพิ่มรอบแรกของวันนี้ได้เลย ✅</div>
+      </section>
+      </div>
+
+      <section id="profilePage" class="hidden space-y-6">
+        <div class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-emerald-900 to-lime-700 p-6 text-white shadow-2xl shadow-emerald-500/20 sm:p-8">
+          <div class="grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-end">
+            <div>
+              <p class="mb-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-sm font-bold backdrop-blur">Rider Profile</p>
+              <h1 class="text-3xl font-black tracking-tight sm:text-5xl">โปรไฟล์ไรเดอร์และข้อมูลรถ</h1>
+              <p class="mt-4 max-w-2xl text-white/80">เก็บข้อมูลประจำตัว รถคู่ใจ และน้ำมันที่ใช้ประจำ โดยเชื่อมกับ API ราคาน้ำมันเดิมเพื่อเติมราคาและชนิดน้ำมันล่าสุดให้อัตโนมัติ</p>
+            </div>
+            <div class="rounded-3xl bg-white/15 p-5 backdrop-blur">
+              <div class="flex items-center gap-4">
+                <div id="profileAvatarPreview" class="grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-white text-4xl shadow-xl">🛵</div>
+                <div>
+                  <p id="profileNamePreview" class="text-2xl font-black">ไรเดอร์ Raiderjaaa</p>
+                  <p id="profileVehiclePreview" class="text-white/75">ยังไม่ได้ระบุรถ</p>
+                  <p id="profileCityPreview" class="mt-1 text-sm font-bold text-emerald-100">พื้นที่วิ่งงาน: -</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+          <form id="profileForm" class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+            <div class="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Profile Settings</p>
+                <h2 class="text-2xl font-black">ข้อมูลส่วนตัว</h2>
+              </div>
+              <button type="button" id="resetProfileBtn" class="text-sm font-bold text-slate-400 hover:text-rose-500">ค่าเริ่มต้น</button>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="field">ชื่อไรเดอร์<input id="profileName" type="text" placeholder="เช่น พี่เจ ไรเดอร์" /></label>
+              <label class="field">เบอร์โทร<input id="profilePhone" type="tel" placeholder="08x-xxx-xxxx" /></label>
+              <label class="field">ประเภทรถ<input id="profileVehicle" type="text" placeholder="Honda Click 125i" /></label>
+              <label class="field">ทะเบียนรถ<input id="profilePlate" type="text" placeholder="1กก 1234" /></label>
+              <label class="field">พื้นที่วิ่งงาน<input id="profileCity" type="text" placeholder="กรุงเทพฯ / เชียงใหม่" /></label>
+              <label class="field">อีโมจิประจำตัว<input id="profileAvatar" type="text" maxlength="2" placeholder="🛵" /></label>
+              <label class="field">น้ำมันประจำ<select id="profileFuelType"></select></label>
+              <label class="field">อัตราสิ้นเปลืองประจำ (กม./ลิตร)<input id="profileEfficiency" type="number" min="1" step="0.1" /></label>
+              <label class="field sm:col-span-2">หมายเหตุประจำตัว<textarea id="profileBio" rows="3" placeholder="เช่น รับงานรอบเย็น เน้นโซนออฟฟิศ และตรวจน้ำมันก่อนเริ่มกะ"></textarea></label>
+            </div>
+            <button class="mt-5 w-full rounded-2xl bg-emerald-500 px-5 py-4 font-black text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-emerald-600">บันทึก Profile</button>
+          </form>
+
+          <div class="space-y-6">
+            <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Connected API</p>
+                  <h2 class="text-2xl font-black">ราคาน้ำมันจาก API เดิม</h2>
+                </div>
+                <span id="profileApiStatus" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">รอข้อมูล</span>
+              </div>
+              <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                <div class="profile-metric"><p>น้ำมันที่เลือก</p><strong id="profileFuelName">-</strong><span id="profileFuelPrice">฿0/ลิตร</span></div>
+                <div class="profile-metric"><p>อัปเดตล่าสุด</p><strong id="profileFuelUpdated">-</strong><span>thai-oil-api/latest</span></div>
+              </div>
+              <button id="profileRefreshFuelBtn" class="mt-4 w-full rounded-2xl border border-emerald-200 px-4 py-3 font-black text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950">ดึงราคาน้ำมันล่าสุด</button>
+            </section>
+
+            <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+              <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rider Stats</p>
+              <h2 class="text-2xl font-black">สถิติของโปรไฟล์นี้</h2>
+              <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                <div class="profile-metric"><p>งานทั้งหมด</p><strong id="profileJobs">0</strong><span>รายการ</span></div>
+                <div class="profile-metric"><p>ระยะทางรวม</p><strong id="profileKm">0 กม.</strong><span>จากข้อมูล Dashboard</span></div>
+                <div class="profile-metric"><p>กำไรรวม</p><strong id="profileProfit">฿0</strong><span>สุทธิหลังค่าน้ำมัน</span></div>
+                <div class="profile-metric"><p>ประหยัดน้ำมัน</p><strong id="profileEfficiencyPreview">40 กม./ลิตร</strong><span>ใช้เป็นค่าเริ่มต้นงานใหม่</span></div>
+              </div>
+            </section>
+          </div>
+        </div>
       </section>
     </main>
 
