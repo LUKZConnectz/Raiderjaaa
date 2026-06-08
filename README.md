@@ -11,6 +11,8 @@
 - Dark Mode / White Mode
 - ดึงราคาน้ำมันแบบ Real-time จาก `https://api.chnwt.dev/thai-oil-api/latest` พร้อมโหมดสำรองให้กรอกราคาเองเมื่อ API ไม่ตอบ
 - Export ข้อมูลเป็น Excel และ PDF
+- หน้า Profile สำหรับบันทึกข้อมูลไรเดอร์ รถคู่ใจ น้ำมันประจำ และสถิติจาก Dashboard
+- Profile เชื่อมกับ API ราคาน้ำมันเดิม (`thai-oil-api/latest`) เพื่ออัปเดตชนิดน้ำมันและราคาอัตโนมัติ
 - Responsive ใช้งานบนมือถือได้
 
 ## Run locally
