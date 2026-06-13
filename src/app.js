@@ -71,6 +71,48 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => 
   "'": '&#39;'
 })[char]);
 
+
+function swalThemeOptions() {
+  const isDark = document.documentElement.classList.contains('dark');
+  return {
+    background: isDark ? '#0f172a' : '#ffffff',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    confirmButtonColor: '#10b981',
+    cancelButtonColor: '#64748b'
+  };
+}
+
+function notify(title, icon = 'success', text = '') {
+  if (!window.Swal) {
+    alert(text ? `${title}\n${text}` : title);
+    return Promise.resolve();
+  }
+  return Swal.fire({
+    ...swalThemeOptions(),
+    icon,
+    title,
+    text,
+    timer: icon === 'success' ? 1700 : undefined,
+    showConfirmButton: icon !== 'success',
+    timerProgressBar: icon === 'success'
+  });
+}
+
+async function confirmAction({ title, text, confirmButtonText = 'ยืนยัน', icon = 'warning' }) {
+  if (!window.Swal) return confirm(text || title);
+  const result = await Swal.fire({
+    ...swalThemeOptions(),
+    icon,
+    title,
+    text,
+    showCancelButton: true,
+    confirmButtonText,
+    cancelButtonText: 'ยกเลิก',
+    reverseButtons: true
+  });
+  return result.isConfirmed;
+}
+
 function loadJson(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -270,7 +312,7 @@ function handleFuelTypeChange() {
 
 function saveManualFuelPrice() {
   const price = Number.parseFloat($('manualFuelPrice').value);
-  if (!Number.isFinite(price) || price <= 0) return alert('กรุณาใส่ราคาน้ำมันให้ถูกต้อง');
+  if (!Number.isFinite(price) || price <= 0) return notify('ข้อมูลไม่ถูกต้อง', 'error', 'กรุณาใส่ราคาน้ำมันให้ถูกต้อง');
   settings.fuelPrice = price;
   settings.fuelType = $('fuelType').value || settings.fuelType;
   const index = settings.fuels.findIndex((fuel) => fuel.type === settings.fuelType);
@@ -279,18 +321,20 @@ function saveManualFuelPrice() {
   saveState();
   renderFuelOptions();
   updatePreview();
+  notify('บันทึกราคาน้ำมันแล้ว', 'success');
 }
 
 function saveGoals() {
   const dailyGoal = Number.parseFloat($('dailyGoalInput').value);
   const monthlyGoal = Number.parseFloat($('monthlyGoalInput').value);
   if ([dailyGoal, monthlyGoal].some((value) => !Number.isFinite(value) || value <= 0)) {
-    return alert('กรุณาใส่เป้าหมายรายได้ให้ถูกต้อง');
+    return notify('ข้อมูลไม่ถูกต้อง', 'error', 'กรุณาใส่เป้าหมายรายได้ให้ถูกต้อง');
   }
   settings.dailyGoal = dailyGoal;
   settings.monthlyGoal = monthlyGoal;
   saveState();
   render();
+  notify('บันทึกเป้าหมายแล้ว', 'success');
 }
 
 function calculate({ fee, km, efficiency, fuelPrice }) {
@@ -318,7 +362,7 @@ function addJob(event) {
   const efficiency = Number.parseFloat($('efficiency').value);
   const fuelPrice = Number.parseFloat($('jobFuelPrice').value);
   if ([fee, km, efficiency, fuelPrice].some((value) => !Number.isFinite(value) || value < 0) || efficiency <= 0) {
-    return alert('กรุณากรอกตัวเลขให้ถูกต้อง');
+    return notify('ข้อมูลไม่ถูกต้อง', 'error', 'กรุณากรอกตัวเลขให้ถูกต้อง');
   }
   const totals = calculate({ fee, km, efficiency, fuelPrice });
   jobs.unshift({
@@ -340,6 +384,7 @@ function addJob(event) {
   saveState();
   resetForm(false);
   render();
+  notify('บันทึกงานเรียบร้อย', 'success', `กำไรสุทธิ ${money(totals.profit)}`);
 }
 
 function resetForm(clearDate = true) {
@@ -350,17 +395,32 @@ function resetForm(clearDate = true) {
   updatePreview();
 }
 
-function clearAllJobs() {
-  if (!jobs.length || !confirm('ต้องการลบรายการงานทั้งหมดใช่ไหม?')) return;
+async function clearAllJobs() {
+  if (!jobs.length) return notify('ยังไม่มีรายการงาน', 'info', 'ไม่มีข้อมูลให้ลบตอนนี้');
+  const confirmed = await confirmAction({
+    title: 'ลบรายการทั้งหมด?',
+    text: 'ข้อมูลงานทั้งหมดจะถูกลบออกจากเครื่องนี้',
+    confirmButtonText: 'ลบทั้งหมด'
+  });
+  if (!confirmed) return;
   jobs = [];
   saveState();
   render();
+  notify('ลบรายการทั้งหมดแล้ว', 'success');
 }
 
-function deleteJob(id) {
-  jobs = jobs.filter((job) => job.id !== id);
+async function deleteJob(id) {
+  const job = jobs.find((item) => item.id === id);
+  const confirmed = await confirmAction({
+    title: 'ลบงานนี้?',
+    text: job ? `${job.note} • ${money(job.profit)}` : 'ยืนยันการลบรายการนี้',
+    confirmButtonText: 'ลบรายการ'
+  });
+  if (!confirmed) return;
+  jobs = jobs.filter((jobItem) => jobItem.id !== id);
   saveState();
   render();
+  notify('ลบรายการแล้ว', 'success');
 }
 
 function render() {
@@ -620,7 +680,7 @@ function renderProfile() {
 function saveProfile(event) {
   event.preventDefault();
   const efficiency = Number.parseFloat($('profileEfficiency').value);
-  if (!Number.isFinite(efficiency) || efficiency <= 0) return alert('กรุณากรอกอัตราสิ้นเปลืองให้ถูกต้อง');
+  if (!Number.isFinite(efficiency) || efficiency <= 0) return notify('ข้อมูลไม่ถูกต้อง', 'error', 'กรุณากรอกอัตราสิ้นเปลืองให้ถูกต้อง');
   profile = {
     name: $('profileName').value.trim() || DEFAULT_PROFILE.name,
     phone: $('profilePhone').value.trim(),
@@ -641,14 +701,20 @@ function saveProfile(event) {
   saveState();
   renderFuelOptions();
   updatePreview();
-  alert('บันทึก Profile เรียบร้อยแล้ว');
+  notify('บันทึก Profile เรียบร้อยแล้ว', 'success');
 }
 
-function resetProfile() {
-  if (!confirm('ต้องการคืนค่า Profile เป็นค่าเริ่มต้นใช่ไหม?')) return;
+async function resetProfile() {
+  const confirmed = await confirmAction({
+    title: 'คืนค่า Profile?',
+    text: 'ข้อมูลโปรไฟล์จะกลับเป็นค่าเริ่มต้น',
+    confirmButtonText: 'คืนค่า'
+  });
+  if (!confirmed) return;
   profile = { ...DEFAULT_PROFILE, fuelType: settings.fuelType, efficiency: settings.efficiency };
   saveState();
   renderProfile();
+  notify('คืนค่า Profile แล้ว', 'success');
 }
 
 function exportRows() {
@@ -669,15 +735,16 @@ function exportRows() {
 }
 
 function exportExcel() {
-  if (!jobs.length) return alert('ยังไม่มีข้อมูลสำหรับ Export');
+  if (!jobs.length) return notify('ยังไม่มีข้อมูลสำหรับ Export', 'info');
   const worksheet = XLSX.utils.json_to_sheet(exportRows());
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Raiderjaaa Jobs');
   XLSX.writeFile(workbook, `raiderjaaa-${today()}.xlsx`);
+  notify('Export Excel แล้ว', 'success');
 }
 
 function exportPdf() {
-  if (!jobs.length) return alert('ยังไม่มีข้อมูลสำหรับ Export');
+  if (!jobs.length) return notify('ยังไม่มีข้อมูลสำหรับ Export', 'info');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape' });
   doc.setFontSize(18);
@@ -692,6 +759,7 @@ function exportPdf() {
     headStyles: { fillColor: [16, 185, 129] }
   });
   doc.save(`raiderjaaa-${today()}.pdf`);
+  notify('Export PDF แล้ว', 'success');
 }
 
 init();
