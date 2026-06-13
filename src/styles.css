@@ -566,3 +566,122 @@ html[data-accent="violet"] .goal-progress {
 .dark .zone-row p {
   color: rgb(148 163 184);
 }
+
+html,
+body {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+main,
+section,
+form,
+aside,
+.app-card,
+.stat-card,
+.summary-card,
+.profile-metric,
+.zone-row,
+.notice-card,
+.badge-card,
+.fuel-card {
+  min-width: 0;
+}
+
+.app-card,
+.stat-card,
+.summary-card,
+.fuel-card,
+.profile-metric,
+.zone-row,
+.notice-card,
+.badge-card,
+.calendar-cell {
+  overflow-wrap: anywhere;
+}
+
+.swal2-popup {
+  border-radius: 1.5rem;
+  font-family: 'Noto Sans Thai', system-ui, sans-serif;
+}
+
+@media (max-width: 639px) {
+  header nav {
+    align-items: flex-start;
+  }
+
+  .nav-pill {
+    font-size: 0.76rem;
+    padding: 0.5rem 0.68rem;
+  }
+
+  .app-card {
+    border-radius: 1.5rem !important;
+    padding: 1rem !important;
+  }
+
+  .stat-card {
+    border-radius: 1.25rem;
+    padding: 0.85rem;
+  }
+
+  .stat-card span {
+    border-radius: 0.9rem;
+    height: 2.6rem;
+    width: 2.6rem;
+  }
+
+  .field input,
+  .field select,
+  .field textarea,
+  #searchInput,
+  #fuelType,
+  #manualFuelPrice {
+    border-radius: 0.9rem;
+    font-size: 16px;
+    min-width: 0;
+    padding: 0.75rem 0.85rem;
+    width: 100%;
+  }
+
+  .chart-board {
+    gap: 0.45rem;
+    grid-template-columns: repeat(7, minmax(2.6rem, 1fr));
+    min-height: 11rem;
+  }
+
+  .chart-day {
+    min-width: 2.6rem;
+  }
+
+  .chart-stack {
+    border-radius: 1rem;
+    height: 7.5rem;
+    padding: 0.55rem 0.3rem;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 0.3rem;
+  }
+
+  .calendar-cell {
+    border-radius: 0.75rem;
+    min-height: 3.35rem;
+    padding: 0.35rem;
+  }
+
+  .calendar-cell strong,
+  .calendar-cell span,
+  .calendar-cell small {
+    font-size: 0.68rem;
+  }
+}
