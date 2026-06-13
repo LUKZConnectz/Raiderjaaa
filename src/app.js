@@ -22,16 +22,39 @@ const DEFAULT_PROFILE = {
   efficiency: 40,
   bio: ''
 };
+const BADGES = [
+  { id: 'first-job', icon: '🚀', title: 'เริ่มออกตัว', description: 'บันทึกงานแรก', unlocked: (total) => total.count >= 1 },
+  { id: 'ten-jobs', icon: '🔥', title: 'ขยันรับงาน', description: 'ครบ 10 งาน', unlocked: (total) => total.count >= 10 },
+  { id: 'profit-1k', icon: '💎', title: 'กำไรพันแรก', description: 'กำไรรวมถึง ฿1,000', unlocked: (total) => total.profit >= 1000 },
+  { id: 'km-100', icon: '🛣️', title: 'นักลุย 100 กม.', description: 'ระยะทางรวม 100 กม.', unlocked: (total) => total.km >= 100 },
+  { id: 'zone-master', icon: '📍', title: 'เจ้าแห่งโซน', description: 'บันทึกโซนอย่างน้อย 3 โซน', unlocked: (_total, _daily, zoneStats) => zoneStats.filter((item) => item.zone !== 'ไม่ระบุโซน').length >= 3 },
+  { id: 'monthly-goal', icon: '🏆', title: 'พิชิตเป้าเดือน', description: 'กำไรเดือนนี้ถึงเป้า', unlocked: (_total, _daily, _zoneStats, monthly, appSettings) => monthly.profit >= appSettings.monthlyGoal }
+];
 
 let jobs = loadJson(STORAGE_KEY, []);
 let settings = loadJson(SETTINGS_KEY, {
   theme: 'light',
+  accent: 'emerald',
+  dailyGoal: 700,
+  monthlyGoal: 18000,
   fuelType: 'Gasohol 95',
   fuelPrice: 38.35,
   efficiency: 40,
   fuels: DEFAULT_FUELS,
   lastFuelUpdate: null
 });
+settings = {
+  theme: 'light',
+  accent: 'emerald',
+  dailyGoal: 700,
+  monthlyGoal: 18000,
+  fuelType: 'Gasohol 95',
+  fuelPrice: 38.35,
+  efficiency: 40,
+  fuels: DEFAULT_FUELS,
+  lastFuelUpdate: null,
+  ...settings
+};
 let profile = { ...DEFAULT_PROFILE, ...loadJson(PROFILE_KEY, {}) };
 let riderSessionId = crypto.randomUUID();
 let presenceTimer = null;
@@ -101,6 +124,8 @@ function init() {
   $('jobDate').value = today();
   $('efficiency').value = settings.efficiency;
   $('jobFuelPrice').value = settings.fuelPrice;
+  $('dailyGoalInput').value = settings.dailyGoal;
+  $('monthlyGoalInput').value = settings.monthlyGoal;
   syncProfileWithSettings();
   renderFuelOptions();
   bindEvents();
@@ -117,6 +142,7 @@ function bindEvents() {
   $('saveFuelPriceBtn').addEventListener('click', saveManualFuelPrice);
   $('jobForm').addEventListener('submit', addJob);
   $('resetFormBtn').addEventListener('click', resetForm);
+  $('saveGoalBtn').addEventListener('click', saveGoals);
   $('clearAllBtn').addEventListener('click', clearAllJobs);
   $('exportExcelBtn').addEventListener('click', exportExcel);
   $('exportPdfBtn').addEventListener('click', exportPdf);
@@ -131,11 +157,13 @@ function bindEvents() {
 
 function applyTheme() {
   document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+  document.documentElement.dataset.accent = settings.accent || 'emerald';
   $('themeToggle').textContent = settings.theme === 'dark' ? '☀️ White' : '🌙 Dark';
 }
 
 function toggleTheme() {
   settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+  settings.accent = settings.theme === 'dark' ? 'violet' : 'emerald';
   saveState();
   applyTheme();
 }
@@ -253,6 +281,18 @@ function saveManualFuelPrice() {
   updatePreview();
 }
 
+function saveGoals() {
+  const dailyGoal = Number.parseFloat($('dailyGoalInput').value);
+  const monthlyGoal = Number.parseFloat($('monthlyGoalInput').value);
+  if ([dailyGoal, monthlyGoal].some((value) => !Number.isFinite(value) || value <= 0)) {
+    return alert('กรุณาใส่เป้าหมายรายได้ให้ถูกต้อง');
+  }
+  settings.dailyGoal = dailyGoal;
+  settings.monthlyGoal = monthlyGoal;
+  saveState();
+  render();
+}
+
 function calculate({ fee, km, efficiency, fuelPrice }) {
   const liters = km / efficiency;
   const fuelCost = liters * fuelPrice;
@@ -285,6 +325,8 @@ function addJob(event) {
     id: crypto.randomUUID(),
     date: $('jobDate').value || today(),
     note: $('jobNote').value.trim() || 'งานส่งของ',
+    zone: $('jobZone').value.trim(),
+    route: $('jobRoute').value.trim(),
     fee,
     km,
     efficiency,
@@ -326,6 +368,7 @@ function render() {
   const daily = summarize(filterByPeriod('day'));
   const weekly = summarize(filterByPeriod('week'));
   const monthly = summarize(filterByPeriod('month'));
+  const zoneStats = summarizeZones(jobs);
 
   $('heroFee').textContent = money(daily.fee);
   $('heroFuel').textContent = money(daily.fuelCost);
@@ -342,6 +385,10 @@ function render() {
   $('monthlySub').textContent = `${monthly.count} งาน • ${number(monthly.km)} กม.`;
 
   renderProfitBars();
+  renderGoalPanel(daily, monthly);
+  renderBadges(total, daily, zoneStats, monthly);
+  renderCalendar();
+  renderZonePanel(zoneStats);
   renderJobsTable();
   renderProfile();
   renderRoute();
@@ -374,25 +421,125 @@ function renderProfitBars() {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
     const key = date.toISOString().slice(0, 10);
-    return { key, label: date.toLocaleDateString('th-TH', { weekday: 'short' }), profit: summarize(jobs.filter((job) => job.date === key)).profit };
+    const summary = summarize(jobs.filter((job) => job.date === key));
+    return { key, label: date.toLocaleDateString('th-TH', { weekday: 'short' }), ...summary };
   });
-  const max = Math.max(...days.map((day) => Math.abs(day.profit)), 1);
+  const max = Math.max(...days.map((day) => Math.max(day.fee, day.fuelCost, Math.abs(day.profit))), 1);
   $('profitBars').innerHTML = days.map((day) => `
-    <div class="flex h-full flex-1 flex-col items-center justify-end gap-2">
-      <span class="text-xs font-bold ${day.profit < 0 ? 'text-rose-500' : 'text-emerald-600'}">${money(day.profit)}</span>
-      <div class="bar w-full ${day.profit < 0 ? '!bg-rose-400' : ''}" style="height:${Math.max(8, Math.abs(day.profit) / max * 120)}px"></div>
-      <span class="text-xs text-slate-500">${day.label}</span>
+    <div class="chart-day">
+      <div class="chart-tooltip">
+        <strong>${day.label}</strong>
+        <span>ค่ารอบ ${money(day.fee)}</span>
+        <span>น้ำมัน ${money(day.fuelCost)}</span>
+        <span>กำไร ${money(day.profit)}</span>
+      </div>
+      <div class="chart-stack">
+        <div class="chart-bar fee" style="height:${Math.max(7, day.fee / max * 130)}px"></div>
+        <div class="chart-bar fuel" style="height:${Math.max(7, day.fuelCost / max * 130)}px"></div>
+        <div class="chart-bar profit ${day.profit < 0 ? 'loss' : ''}" style="height:${Math.max(7, Math.abs(day.profit) / max * 130)}px"></div>
+      </div>
+      <span class="text-xs font-bold text-slate-500 dark:text-slate-400">${day.label}</span>
     </div>`).join('');
+}
+
+function renderGoalPanel(daily, monthly) {
+  const dailyPercent = Math.min(100, daily.profit / settings.dailyGoal * 100);
+  const monthlyPercent = Math.min(100, monthly.profit / settings.monthlyGoal * 100);
+  $('dailyGoalProgress').style.width = `${Math.max(0, dailyPercent)}%`;
+  $('monthlyGoalProgress').style.width = `${Math.max(0, monthlyPercent)}%`;
+  $('dailyGoalText').textContent = `${money(daily.profit)} / ${money(settings.dailyGoal)} (${number(dailyPercent, 0)}%)`;
+  $('monthlyGoalText').textContent = `${money(monthly.profit)} / ${money(settings.monthlyGoal)} (${number(monthlyPercent, 0)}%)`;
+  const remaining = Math.max(0, settings.dailyGoal - daily.profit);
+  $('goalNotice').innerHTML = daily.profit >= settings.dailyGoal
+    ? '🎉 วันนี้ถึงเป้ารายได้แล้ว! เก็บแรงไว้รับโบนัสรอบถัดไปได้เลย'
+    : `🔔 เหลืออีก <strong>${money(remaining)}</strong> จะถึงเป้าวันนี้ ลองรับงานโซนที่กำไรดีขึ้นอีกนิด`;
+}
+
+function renderBadges(total, daily, zoneStats, monthly) {
+  const unlocked = BADGES.filter((badge) => badge.unlocked(total, daily, zoneStats, monthly, settings)).length;
+  $('badgeCount').textContent = `${unlocked}/${BADGES.length}`;
+  $('badgeGrid').innerHTML = BADGES.map((badge) => {
+    const isUnlocked = badge.unlocked(total, daily, zoneStats, monthly, settings);
+    return `
+      <div class="badge-card ${isUnlocked ? 'unlocked' : ''}">
+        <span>${badge.icon}</span>
+        <strong>${badge.title}</strong>
+        <p>${badge.description}</p>
+      </div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const blanks = firstDay.getDay();
+  const monthJobs = jobs.filter((job) => {
+    const date = new Date(`${job.date}T00:00:00`);
+    return date.getMonth() === month && date.getFullYear() === year;
+  });
+  const byDate = monthJobs.reduce((acc, job) => {
+    acc[job.date] = acc[job.date] || [];
+    acc[job.date].push(job);
+    return acc;
+  }, {});
+  $('calendarTitle').textContent = now.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+  const cells = [
+    ...Array.from({ length: blanks }, () => '<div class="calendar-cell muted"></div>'),
+    ...Array.from({ length: lastDay.getDate() }, (_, index) => {
+      const day = index + 1;
+      const date = new Date(year, month, day);
+      const key = date.toISOString().slice(0, 10);
+      const summary = summarize(byDate[key] || []);
+      const active = summary.count > 0;
+      return `
+        <div class="calendar-cell ${active ? 'active' : ''}">
+          <strong>${day}</strong>
+          <span>${active ? `${summary.count} งาน` : 'ว่าง'}</span>
+          <small>${active ? money(summary.profit) : ''}</small>
+        </div>`;
+    })
+  ];
+  $('calendarGrid').innerHTML = cells.join('');
+}
+
+function summarizeZones(items) {
+  const grouped = items.reduce((acc, job) => {
+    const zone = job.zone || 'ไม่ระบุโซน';
+    acc[zone] = acc[zone] || [];
+    acc[zone].push(job);
+    return acc;
+  }, {});
+  return Object.entries(grouped)
+    .map(([zone, zoneJobs]) => ({ zone, ...summarize(zoneJobs), routes: [...new Set(zoneJobs.map((job) => job.route).filter(Boolean))] }))
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 5);
+}
+
+function renderZonePanel(zoneStats) {
+  $('topZone').textContent = zoneStats[0]?.zone || '-';
+  $('topZoneProfit').textContent = zoneStats[0] ? money(zoneStats[0].profit) : 'ยังไม่มีข้อมูลโซน';
+  $('zoneList').innerHTML = zoneStats.length ? zoneStats.map((item) => `
+    <div class="zone-row">
+      <div>
+        <strong>📍 ${escapeHtml(item.zone)}</strong>
+        <p>${item.count} งาน • ${number(item.km)} กม. ${item.routes.length ? `• ${escapeHtml(item.routes.slice(0, 2).join(', '))}` : ''}</p>
+      </div>
+      <span>${money(item.profit)}</span>
+    </div>`).join('') : '<p class="text-sm text-slate-500">เพิ่มโซน/เส้นทางในฟอร์มเพื่อดูพื้นที่ทำเงิน</p>';
 }
 
 function renderJobsTable() {
   const keyword = $('searchInput').value.trim().toLowerCase();
-  const filtered = jobs.filter((job) => job.note.toLowerCase().includes(keyword));
+  const filtered = jobs.filter((job) => [job.note, job.zone, job.route].some((value) => String(value || '').toLowerCase().includes(keyword)));
   $('emptyState').classList.toggle('hidden', filtered.length > 0);
   $('jobsTable').innerHTML = filtered.map((job) => `
     <tr class="border-b border-slate-100 dark:border-slate-800">
       <td class="py-4 pr-4 font-bold">${escapeHtml(job.date)}</td>
       <td class="py-4 pr-4">${escapeHtml(job.note)}<br><span class="text-xs text-slate-400">${escapeHtml(job.fuelType)} • ${money(job.fuelPrice)}/ลิตร</span></td>
+      <td class="py-4 pr-4"><span class="font-bold">${escapeHtml(job.zone || '-')}</span><br><span class="text-xs text-slate-400">${escapeHtml(job.route || 'ไม่ระบุเส้นทาง')}</span></td>
       <td class="py-4 pr-4 font-bold">${money(job.fee)}</td>
       <td class="py-4 pr-4">${number(job.km)} กม.</td>
       <td class="py-4 pr-4 text-rose-500">${money(job.fuelCost)}</td>
@@ -401,7 +548,6 @@ function renderJobsTable() {
     </tr>`).join('');
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteJob(button.dataset.delete)));
 }
-
 
 function syncProfileWithSettings() {
   profile.fuelType = profile.fuelType || settings.fuelType;
@@ -509,6 +655,8 @@ function exportRows() {
   return jobs.map((job) => ({
     วันที่: job.date,
     หมายเหตุ: job.note,
+    โซน: job.zone || '',
+    เส้นทาง: job.route || '',
     ค่ารอบ: job.fee,
     ระยะทางกม: job.km,
     อัตราสิ้นเปลืองกมต่อลิตร: job.efficiency,
@@ -538,8 +686,8 @@ function exportPdf() {
   doc.text(`Generated: ${new Date().toLocaleString('th-TH')}`, 14, 24);
   doc.autoTable({
     startY: 30,
-    head: [['Date', 'Note', 'Fee', 'KM', 'Fuel Cost', 'Profit']],
-    body: jobs.map((job) => [job.date, job.note, job.fee.toFixed(2), job.km.toFixed(2), job.fuelCost.toFixed(2), job.profit.toFixed(2)]),
+    head: [['Date', 'Note', 'Zone', 'Route', 'Fee', 'KM', 'Fuel Cost', 'Profit']],
+    body: jobs.map((job) => [job.date, job.note, job.zone || '-', job.route || '-', job.fee.toFixed(2), job.km.toFixed(2), job.fuelCost.toFixed(2), job.profit.toFixed(2)]),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [16, 185, 129] }
   });

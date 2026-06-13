@@ -26,7 +26,7 @@
           <div class="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-500 text-xl font-black text-white shadow-lg shadow-emerald-500/30">R</div>
           <div>
             <p class="text-lg font-black leading-tight">Raiderjaaa</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Dashboard ค่ารอบ • น้ำมัน • กำไร</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Dashboard • Goals • Route • Badge</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -45,7 +45,7 @@
           <div class="max-w-2xl">
             <p class="mb-3 inline-flex rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur">สำหรับไรเดอร์ Grab / Delivery</p>
             <h1 class="text-3xl font-black tracking-tight sm:text-5xl">บันทึกค่ารอบ คำนวณค่าน้ำมัน แล้วดู “กำไรจริง” ทุกวัน</h1>
-            <p class="mt-4 text-white/85">กรอกระยะทาง ค่ารอบ และอัตราสิ้นเปลืองรถ ระบบจะคำนวณลิตรน้ำมัน ค่าน้ำมัน กำไรสุทธิ พร้อมสรุปรายวัน/สัปดาห์/เดือน และ Export ได้ทันที</p>
+            <p class="mt-4 text-white/85">กรอกระยะทาง ค่ารอบ โซน และเส้นทาง ระบบจะคำนวณกำไรจริง พร้อม Chart ใหม่ ปฏิทินรายเดือน เป้าหมายรายได้ Badge และ Export ได้ทันที</p>
           </div>
           <div class="mt-6 grid gap-3 sm:grid-cols-3">
             <div class="rounded-2xl bg-white/15 p-4 backdrop-blur"><p class="text-sm text-white/75">ค่ารอบวันนี้</p><p id="heroFee" class="text-2xl font-black">฿0</p></div>
@@ -93,6 +93,8 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="field">วันที่<input id="jobDate" type="date" required /></label>
             <label class="field">ชื่อลูกค้า/หมายเหตุ<input id="jobNote" type="text" placeholder="เช่น GrabFood รอบเช้า" /></label>
+            <label class="field">โซนรับงาน<input id="jobZone" type="text" placeholder="เช่น สยาม / อารีย์" /></label>
+            <label class="field">เส้นทาง/จุดรับ-ส่ง<input id="jobRoute" type="text" placeholder="เช่น MBK → จุฬา" /></label>
             <label class="field">ค่ารอบที่ได้รับ (บาท)<input id="jobFee" type="number" min="0" step="0.01" required placeholder="85" /></label>
             <label class="field">ระยะทางงานนี้ (กม.)<input id="jobKm" type="number" min="0" step="0.01" required placeholder="12.5" /></label>
             <label class="field">อัตราสิ้นเปลือง (กม./ลิตร)<input id="efficiency" type="number" min="1" step="0.1" required value="40" /></label>
@@ -125,22 +127,84 @@
             <div class="summary-card"><p>รายสัปดาห์</p><strong id="weeklyProfit">฿0</strong><span id="weeklySub">0 งาน</span></div>
             <div class="summary-card"><p>รายเดือน</p><strong id="monthlyProfit">฿0</strong><span id="monthlySub">0 งาน</span></div>
           </div>
-          <div class="mt-5 h-48 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
-            <div id="profitBars" class="flex h-full items-end gap-2"></div>
+          <div class="mt-5 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+            <div class="mb-3 flex flex-wrap gap-3 text-xs font-black text-slate-500 dark:text-slate-400">
+              <span><i class="legend-dot bg-emerald-500"></i>ค่ารอบ</span>
+              <span><i class="legend-dot bg-amber-400"></i>ค่าน้ำมัน</span>
+              <span><i class="legend-dot bg-lime-500"></i>กำไร</span>
+            </div>
+            <div id="profitBars" class="chart-board"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Goals & Notifications</p>
+              <h2 class="text-2xl font-black">🔔 เป้าหมายรายได้</h2>
+            </div>
+            <span id="badgeCount" class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">0/6</span>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <label class="field">เป้าวันนี้ (บาท)<input id="dailyGoalInput" type="number" min="1" step="1" /></label>
+            <label class="field">เป้าเดือนนี้ (บาท)<input id="monthlyGoalInput" type="number" min="1" step="1" /></label>
+            <button id="saveGoalBtn" class="self-end rounded-2xl bg-emerald-500 px-5 py-3 font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600">บันทึกเป้า</button>
+          </div>
+          <div class="mt-5 space-y-4">
+            <div>
+              <div class="mb-2 flex justify-between text-sm font-black"><span>รายวัน</span><span id="dailyGoalText">฿0 / ฿0</span></div>
+              <div class="goal-track"><div id="dailyGoalProgress" class="goal-progress"></div></div>
+            </div>
+            <div>
+              <div class="mb-2 flex justify-between text-sm font-black"><span>รายเดือน</span><span id="monthlyGoalText">฿0 / ฿0</span></div>
+              <div class="goal-track"><div id="monthlyGoalProgress" class="goal-progress monthly"></div></div>
+            </div>
+            <div id="goalNotice" class="notice-card">🔔 ตั้งเป้ารายได้เพื่อรับแจ้งเตือน</div>
+          </div>
+          <div class="mt-5">
+            <h3 class="mb-3 text-lg font-black">🏆 Goal & Badge</h3>
+            <div id="badgeGrid" class="grid gap-3 sm:grid-cols-2"></div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-2 xl:grid-cols-1">
+          <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+            <div class="mb-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Monthly Calendar</p>
+                <h2 class="text-2xl font-black">🗓️ ปฏิทินงานรายเดือน</h2>
+              </div>
+              <span id="calendarTitle" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">-</span>
+            </div>
+            <div class="calendar-weekdays"><span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span></div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+            <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Route & Zone</p>
+            <h2 class="text-2xl font-black">📍 บันทึกเส้นทาง/โซนทำเงิน</h2>
+            <div class="mt-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-lime-500 p-4 text-white shadow-lg shadow-emerald-500/20">
+              <p class="text-sm text-white/80">โซนกำไรดีที่สุด</p>
+              <strong id="topZone" class="block text-2xl font-black">-</strong>
+              <span id="topZoneProfit" class="text-sm font-bold text-white/85">ยังไม่มีข้อมูลโซน</span>
+            </div>
+            <div id="zoneList" class="mt-4 space-y-3"></div>
+          </section>
         </div>
       </section>
 
       <section class="mt-6 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
         <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 class="text-2xl font-black">รายการงานทั้งหมด</h2>
-          <input id="searchInput" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-950" placeholder="ค้นหาหมายเหตุ..." />
+          <input id="searchInput" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:ring-4 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-950" placeholder="ค้นหาหมายเหตุ โซน หรือเส้นทาง..." />
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="text-xs uppercase text-slate-500 dark:text-slate-400">
               <tr class="border-b border-slate-200 dark:border-slate-800">
-                <th class="py-3 pr-4">วันที่</th><th class="py-3 pr-4">หมายเหตุ</th><th class="py-3 pr-4">ค่ารอบ</th><th class="py-3 pr-4">กม.</th><th class="py-3 pr-4">ค่าน้ำมัน</th><th class="py-3 pr-4">กำไร</th><th class="py-3 text-right">จัดการ</th>
+                <th class="py-3 pr-4">วันที่</th><th class="py-3 pr-4">หมายเหตุ</th><th class="py-3 pr-4">โซน/เส้นทาง</th><th class="py-3 pr-4">ค่ารอบ</th><th class="py-3 pr-4">กม.</th><th class="py-3 pr-4">ค่าน้ำมัน</th><th class="py-3 pr-4">กำไร</th><th class="py-3 text-right">จัดการ</th>
               </tr>
             </thead>
             <tbody id="jobsTable"></tbody>
