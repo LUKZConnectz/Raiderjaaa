@@ -685,3 +685,119 @@ aside,
     font-size: 0.68rem;
   }
 }
+
+/* Modern compact usability pass */
+:root {
+  --card-shadow: 0 18px 45px rgb(15 23 42 / 0.08);
+}
+
+body {
+  letter-spacing: -0.01em;
+}
+
+header {
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.06);
+}
+
+.hero-panel {
+  background:
+    linear-gradient(135deg, rgb(5 150 105 / 0.96), rgb(16 185 129 / 0.92) 42%, rgb(132 204 22 / 0.9)),
+    radial-gradient(circle at 78% 18%, rgb(255 255 255 / 0.28), transparent 18rem);
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-panel::after {
+  background: rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+  content: '';
+  height: 16rem;
+  position: absolute;
+  right: -5rem;
+  top: -7rem;
+  width: 16rem;
+}
+
+.quick-action {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.quick-action:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.hero-profit-card {
+  background: rgb(255 255 255 / 0.16);
+  border: 1px solid rgb(255 255 255 / 0.24);
+  border-radius: 1.5rem;
+  min-width: min(18rem, 100%);
+  padding: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-profit-card p,
+.hero-profit-card span {
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.hero-profit-card strong {
+  display: block;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1;
+  margin: 0.45rem 0 0.65rem;
+}
+
+.app-card,
+.stat-card,
+.summary-card,
+.profile-metric,
+.fuel-card,
+.zone-row,
+.calendar-cell,
+.badge-card,
+.notice-card {
+  box-shadow: var(--card-shadow);
+}
+
+.stat-card {
+  padding: 0.9rem;
+}
+
+.stat-card strong,
+.summary-card strong,
+.profile-metric strong {
+  letter-spacing: -0.035em;
+}
+
+.field input,
+.field select,
+.field textarea,
+#searchInput,
+#fuelType,
+#manualFuelPrice {
+  min-height: 3rem;
+}
+
+button,
+a,input,select,textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 639px) {
+  .hero-panel { border-radius: 1.35rem !important; }
+  .hero-profit-card { padding: 1rem; }
+  .action-btn { flex: 1 1 auto; text-align: center; }
+}

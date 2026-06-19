@@ -200,7 +200,7 @@ function bindEvents() {
 function applyTheme() {
   document.documentElement.classList.toggle('dark', settings.theme === 'dark');
   document.documentElement.dataset.accent = settings.accent || 'emerald';
-  $('themeToggle').textContent = settings.theme === 'dark' ? '☀️ White' : '🌙 Dark';
+  $('themeToggle').textContent = settings.theme === 'dark' ? '☀️' : '🌙';
 }
 
 function toggleTheme() {
